@@ -15,8 +15,8 @@ namespace Service.EducationRetry.Services
 {
 	public class EducationRetryService : IEducationRetryService
 	{
-		private static readonly string KeyEducationRetryCount = Program.Settings.KeyEducationRetryCount;
-		private static readonly string KeyEducationRetryTask = Program.Settings.KeyEducationRetryTask;
+		private static string KeyEducationRetryCount => Program.ReloadedSettings(model => model.KeyEducationRetryCount).Invoke();
+		private static string KeyEducationRetryTask => Program.ReloadedSettings(model => model.KeyEducationRetryTask).Invoke();
 
 		private readonly IServerKeyValueService _serverKeyValueService;
 		private readonly ILogger<EducationRetryService> _logger;
