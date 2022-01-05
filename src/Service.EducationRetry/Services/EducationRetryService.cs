@@ -78,13 +78,11 @@ namespace Service.EducationRetry.Services
 
 		private async ValueTask<T> Get<T>(string key, Guid? userId) where T : class, new()
 		{
-			ItemsGrpcResponse getResponse = await _serverKeyValueService.Get(new ItemsGetGrpcRequest
+			string value = (await _serverKeyValueService.GetSingle(new ItemsGetSingleGrpcRequest
 			{
-				Keys = new[] {key},
-				UserId = userId
-			});
-
-			string value = getResponse.Items?.FirstOrDefault(model => model.Key == key)?.Value;
+				UserId = userId,
+				Key = key
+			}))?.Value;
 
 			return value == null
 				? new T()
