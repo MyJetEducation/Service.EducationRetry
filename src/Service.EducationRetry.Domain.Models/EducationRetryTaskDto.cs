@@ -1,14 +1,13 @@
-﻿using System.Collections.Generic;
+﻿using Service.Core.Domain.Models.Education;
 
 namespace Service.EducationRetry.Domain.Models
 {
 	public class EducationRetryTaskDto
 	{
-		public EducationRetryTaskDto()
-		{
-			Dtos = new List<EducationRetryTaskItemDto>();
-		}
+		public EducationTutorial Tutorial { get; set; }
 
-		public List<EducationRetryTaskItemDto> Dtos { get; set; }
+		public int Unit { get; set; }
+
+		public int Task { get; set; }
 	}
 }

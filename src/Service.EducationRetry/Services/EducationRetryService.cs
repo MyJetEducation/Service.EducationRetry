@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -15,8 +16,8 @@ namespace Service.EducationRetry.Services
 {
 	public class EducationRetryService : IEducationRetryService
 	{
-		private static string KeyEducationRetryCount => Program.ReloadedSettings(model => model.KeyEducationRetryCount).Invoke();
-		private static string KeyEducationRetryTask => Program.ReloadedSettings(model => model.KeyEducationRetryTask).Invoke();
+		private static Func<string> KeyEducationRetryCount => Program.ReloadedSettings(model => model.KeyEducationRetryCount);
+		private static Func<string> KeyEducationRetryTask => Program.ReloadedSettings(model => model.KeyEducationRetryTask);
 
 		private readonly IServerKeyValueService _serverKeyValueService;
 		private readonly ILogger<EducationRetryService> _logger;
@@ -29,7 +30,7 @@ namespace Service.EducationRetry.Services
 
 		public async ValueTask<CommonGrpcResponse> IncreaseRetryCountAsync(IncreaseRetryCountGrpcRequest request)
 		{
-			var retryCountDto = await Get<EducationRetryCountDto>(KeyEducationRetryCount, request.UserId);
+			EducationRetryCountDto retryCountDto = await GetEducationRetryCount(request.UserId);
 
 			retryCountDto.Count += request.Value;
 
@@ -40,7 +41,7 @@ namespace Service.EducationRetry.Services
 		{
 			Guid? userId = request.UserId;
 
-			var countDto = await Get<EducationRetryCountDto>(KeyEducationRetryCount, userId);
+			EducationRetryCountDto countDto = await GetEducationRetryCount(userId);
 			int originalValue = countDto.Count;
 			countDto.Count -= request.Value;
 			if (countDto.Count <= 0)
@@ -54,7 +55,7 @@ namespace Service.EducationRetry.Services
 			if (!setCountResponse.IsSuccess)
 				return setCountResponse;
 
-			var taskDto = await Get<EducationRetryTaskDto>(KeyEducationRetryTask, userId);
+			List<EducationRetryTaskDto> taskDto = (await GetEducationRetryTasks(userId)).ToList();
 
 			if (TaskInRetry(request.Tutorial, request.Unit, request.Task, taskDto))
 			{
@@ -66,37 +67,47 @@ namespace Service.EducationRetry.Services
 				return CommonGrpcResponse.Fail;
 			}
 
-			taskDto.Dtos.Add(new EducationRetryTaskItemDto
+			taskDto.Add(new EducationRetryTaskDto
 			{
 				Tutorial = request.Tutorial,
 				Unit = request.Unit,
 				Task = request.Task
 			});
 
-			return await Set(KeyEducationRetryTask, userId, taskDto);
+			return await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
 		}
 
-		private async ValueTask<T> Get<T>(string key, Guid? userId) where T : class, new()
+		private async ValueTask<EducationRetryTaskDto[]> GetEducationRetryTasks(Guid? userId)
+		{
+			return await Get<EducationRetryTaskDto[]>(KeyEducationRetryTask, userId) ?? Array.Empty<EducationRetryTaskDto>();
+		}
+
+		private async ValueTask<EducationRetryCountDto> GetEducationRetryCount(Guid? userId)
+		{
+			return await Get<EducationRetryCountDto>(KeyEducationRetryCount, userId) ?? new EducationRetryCountDto();
+		}
+
+		private async ValueTask<T> Get<T>(Func<string> keyFunc, Guid? userId) where T : class
 		{
 			string value = (await _serverKeyValueService.GetSingle(new ItemsGetSingleGrpcRequest
 			{
 				UserId = userId,
-				Key = key
+				Key = keyFunc.Invoke()
 			}))?.Value;
 
 			return value == null
-				? new T()
-				: JsonSerializer.Deserialize<T>(value) ?? new T();
+				? null
+				: JsonSerializer.Deserialize<T>(value);
 		}
 
-		private async ValueTask<CommonGrpcResponse> Set<T>(string key, Guid? userId, T dto) => await _serverKeyValueService.Put(new ItemsPutGrpcRequest
+		private async ValueTask<CommonGrpcResponse> Set<T>(Func<string> keyFunc, Guid? userId, T dto) => await _serverKeyValueService.Put(new ItemsPutGrpcRequest
 		{
 			UserId = userId,
 			Items = new[]
 			{
 				new KeyValueGrpcModel
 				{
-					Key = key,
+					Key = keyFunc.Invoke(),
 					Value = JsonSerializer.Serialize(dto)
 				}
 			}
@@ -104,7 +115,7 @@ namespace Service.EducationRetry.Services
 
 		public async ValueTask<RetryCountGrpcResponse> GetRetryCountAsync(GetRetryCountGrpcRequest request)
 		{
-			var countDto = await Get<EducationRetryCountDto>(KeyEducationRetryCount, request.UserId);
+			EducationRetryCountDto countDto = await GetEducationRetryCount(request.UserId);
 
 			return new RetryCountGrpcResponse
 			{
@@ -114,7 +125,7 @@ namespace Service.EducationRetry.Services
 
 		public async ValueTask<TaskRetryStateGrpcResponse> GetTaskRetryStateAsync(GetTaskRetryStateGrpcRequest request)
 		{
-			var taskDto = await Get<EducationRetryTaskDto>(KeyEducationRetryTask, request.UserId);
+			EducationRetryTaskDto[] taskDto = await GetEducationRetryTasks(request.UserId);
 
 			return new TaskRetryStateGrpcResponse
 			{
@@ -122,7 +133,7 @@ namespace Service.EducationRetry.Services
 			};
 		}
 
-		private static bool TaskInRetry(EducationTutorial tutorial, int unit, int task, EducationRetryTaskDto taskDto) => taskDto.Dtos
+		private static bool TaskInRetry(EducationTutorial tutorial, int unit, int task, IEnumerable<EducationRetryTaskDto> taskDto) => taskDto
 			.Where(dto => dto.Tutorial == tutorial)
 			.Where(dto => dto.Unit == unit)
 			.Any(dto => dto.Task == task);
@@ -131,9 +142,9 @@ namespace Service.EducationRetry.Services
 		{
 			Guid? userId = request.UserId;
 
-			var taskDto = await Get<EducationRetryTaskDto>(KeyEducationRetryTask, userId);
+			List<EducationRetryTaskDto> taskDto = (await GetEducationRetryTasks(userId)).ToList();
 
-			EducationRetryTaskItemDto item = taskDto.Dtos
+			EducationRetryTaskDto item = taskDto
 				.Where(dto => dto.Tutorial == request.Tutorial)
 				.Where(dto => dto.Unit == request.Unit)
 				.FirstOrDefault(dto => dto.Task == request.Task);
@@ -141,9 +152,9 @@ namespace Service.EducationRetry.Services
 			if (item == null)
 				return CommonGrpcResponse.Success;
 
-			taskDto.Dtos.Remove(item);
+			taskDto.Remove(item);
 
-			return await Set(KeyEducationRetryTask, userId, taskDto);
+			return await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
 		}
 	}
 }
