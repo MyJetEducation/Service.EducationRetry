@@ -5,7 +5,7 @@ using Service.Core.Domain.Models.Education;
 namespace Service.EducationRetry.Grpc.Models
 {
 	[DataContract]
-	public class DecreaseRetryCountGrpcRequest : IDecreaseRetryRequest
+	public class DecreaseRetryDateGrpcRequest : IDecreaseRetryRequest
 	{
 		[DataMember(Order = 1)]
 		public Guid? UserId { get; set; }

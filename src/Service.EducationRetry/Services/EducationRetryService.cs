@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
+using Service.Core.Domain.Models;
 using Service.Core.Domain.Models.Education;
 using Service.Core.Grpc.Models;
 using Service.EducationRetry.Domain.Models;
@@ -17,15 +18,98 @@ namespace Service.EducationRetry.Services
 	public class EducationRetryService : IEducationRetryService
 	{
 		private static Func<string> KeyEducationRetryCount => Program.ReloadedSettings(model => model.KeyEducationRetryCount);
+		private static Func<string> KeyEducationRetryLastDate => Program.ReloadedSettings(model => model.KeyEducationRetryLastDate);
 		private static Func<string> KeyEducationRetryTask => Program.ReloadedSettings(model => model.KeyEducationRetryTask);
 
 		private readonly IServerKeyValueService _serverKeyValueService;
 		private readonly ILogger<EducationRetryService> _logger;
+		private readonly ISystemClock _systemClock;
 
-		public EducationRetryService(ILogger<EducationRetryService> logger, IServerKeyValueService serverKeyValueService)
+		public EducationRetryService(ILogger<EducationRetryService> logger, IServerKeyValueService serverKeyValueService, ISystemClock systemClock)
 		{
 			_logger = logger;
 			_serverKeyValueService = serverKeyValueService;
+			_systemClock = systemClock;
+		}
+
+		public async ValueTask<CommonGrpcResponse> DecreaseRetryCountAsync(DecreaseRetryCountGrpcRequest request) => await DecreaseRetryAsync(request, async userId =>
+		{
+			EducationRetryCountDto countDto = await GetEducationRetryCount(userId);
+
+			countDto.Count--;
+
+			if (countDto.Count >= 0)
+			{
+				CommonGrpcResponse saved = await Set(KeyEducationRetryCount, request.UserId, countDto);
+
+				return saved.IsSuccess;
+			}
+
+			_logger.LogError("Error while decrease retry count. User ({user}) has no free retry count to decrease.", request.UserId);
+
+			return false;
+		});
+
+		public async ValueTask<CommonGrpcResponse> DecreaseRetryDateAsync(DecreaseRetryDateGrpcRequest request) => await DecreaseRetryAsync(request, async userId =>
+		{
+			EducationRetryLastDateDto lastDateDto = await GetEducationRetryLastDate(userId);
+
+			DateTime? date = lastDateDto.Date;
+			if (date == null || OneDayGone(date.Value))
+			{
+				lastDateDto.Date = _systemClock.Now;
+
+				CommonGrpcResponse saved = await Set(KeyEducationRetryLastDate, request.UserId, lastDateDto);
+
+				return saved.IsSuccess;
+			}
+
+			_logger.LogError("Error while set new last retry date. User ({user}) has last retry date less than a day ago ({date}).", request.UserId, date);
+
+			return false;
+		});
+
+		private async ValueTask<CommonGrpcResponse> DecreaseRetryAsync(IDecreaseRetryRequest request, Func<Guid?, ValueTask<bool>> reserveFunc)
+		{
+			Guid? userId = request.UserId;
+			List<EducationRetryTaskDto> taskDto = (await GetEducationRetryTasks(userId)).ToList();
+
+			//Already in retry state
+			if (TaskInRetry(request.Tutorial, request.Unit, request.Task, taskDto))
+				return CommonGrpcResponse.Fail;
+
+			//Try to set reservation
+			if (!await reserveFunc.Invoke(userId))
+				return CommonGrpcResponse.Fail;
+
+			taskDto.Add(new EducationRetryTaskDto
+			{
+				Tutorial = request.Tutorial,
+				Unit = request.Unit,
+				Task = request.Task
+			});
+
+			//Set task to retry state
+			return await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
+		}
+
+		public async ValueTask<CommonGrpcResponse> ClearTaskRetryStateAsync(ClearTaskRetryStateGrpcRequest request)
+		{
+			Guid? userId = request.UserId;
+
+			List<EducationRetryTaskDto> taskDto = (await GetEducationRetryTasks(userId)).ToList();
+
+			EducationRetryTaskDto item = taskDto
+				.Where(dto => dto.Tutorial == request.Tutorial)
+				.Where(dto => dto.Unit == request.Unit)
+				.FirstOrDefault(dto => dto.Task == request.Task);
+
+			if (item == null)
+				return CommonGrpcResponse.Success;
+
+			taskDto.Remove(item);
+
+			return await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
 		}
 
 		public async ValueTask<CommonGrpcResponse> IncreaseRetryCountAsync(IncreaseRetryCountGrpcRequest request)
@@ -37,55 +121,49 @@ namespace Service.EducationRetry.Services
 			return await Set(KeyEducationRetryCount, request.UserId, retryCountDto);
 		}
 
-		public async ValueTask<CommonGrpcResponse> DecreaseRetryCountAsync(DecreaseRetryCountGrpcRequest request)
+		public async ValueTask<RetryCountGrpcResponse> GetRetryCountAsync(GetRetryCountGrpcRequest request)
 		{
-			Guid? userId = request.UserId;
+			EducationRetryCountDto countDto = await GetEducationRetryCount(request.UserId);
 
-			EducationRetryCountDto countDto = await GetEducationRetryCount(userId);
-			int originalValue = countDto.Count;
-			countDto.Count -= request.Value;
-			if (countDto.Count <= 0)
+			return new RetryCountGrpcResponse
 			{
-				_logger.LogError("Error while decrease retry count. User ({user}) has no free retry count to decrease.", request.UserId);
-
-				return CommonGrpcResponse.Fail;
-			}
-
-			CommonGrpcResponse setCountResponse = await Set(KeyEducationRetryCount, userId, countDto);
-			if (!setCountResponse.IsSuccess)
-				return setCountResponse;
-
-			List<EducationRetryTaskDto> taskDto = (await GetEducationRetryTasks(userId)).ToList();
-
-			if (TaskInRetry(request.Tutorial, request.Unit, request.Task, taskDto))
-			{
-				_logger.LogError("Error while decrease retry count. Tutorial: {tutorial}, unit: {unit}, task: {task} already in retry mode (UserId: {user}).", request.Tutorial, request.Unit, request.Task, request.UserId);
-
-				//Rollback count
-				countDto.Count = originalValue;
-				Set(KeyEducationRetryCount, userId, countDto).AsTask().Wait();
-				return CommonGrpcResponse.Fail;
-			}
-
-			taskDto.Add(new EducationRetryTaskDto
-			{
-				Tutorial = request.Tutorial,
-				Unit = request.Unit,
-				Task = request.Task
-			});
-
-			return await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
+				Count = countDto.Count
+			};
 		}
 
-		private async ValueTask<EducationRetryTaskDto[]> GetEducationRetryTasks(Guid? userId)
+		public async ValueTask<TaskRetryStateGrpcResponse> GetTaskRetryStateAsync(GetTaskRetryStateGrpcRequest request)
 		{
-			return await Get<EducationRetryTaskDto[]>(KeyEducationRetryTask, userId) ?? Array.Empty<EducationRetryTaskDto>();
+			EducationRetryTaskDto[] taskDto = await GetEducationRetryTasks(request.UserId);
+
+			return new TaskRetryStateGrpcResponse
+			{
+				InRetry = TaskInRetry(request.Tutorial, request.Unit, request.Task, taskDto)
+			};
 		}
 
-		private async ValueTask<EducationRetryCountDto> GetEducationRetryCount(Guid? userId)
+		public async ValueTask<RetryLastDateGrpcResponse> GetRetryLastDateAsync(GetRetryLastDateGrpcRequest request)
 		{
-			return await Get<EducationRetryCountDto>(KeyEducationRetryCount, userId) ?? new EducationRetryCountDto();
+			EducationRetryLastDateDto lastDateDto = await GetEducationRetryLastDate(request.UserId);
+
+			return new RetryLastDateGrpcResponse
+			{
+				Date = lastDateDto.Date
+			};
 		}
+
+		private static bool TaskInRetry(EducationTutorial tutorial, int unit, int task, IEnumerable<EducationRetryTaskDto> taskDto) => taskDto
+			.Where(dto => dto.Tutorial == tutorial)
+			.Where(dto => dto.Unit == unit)
+			.Any(dto => dto.Task == task);
+
+		private async ValueTask<EducationRetryTaskDto[]> GetEducationRetryTasks(Guid? userId) =>
+			await Get<EducationRetryTaskDto[]>(KeyEducationRetryTask, userId) ?? Array.Empty<EducationRetryTaskDto>();
+
+		private async ValueTask<EducationRetryCountDto> GetEducationRetryCount(Guid? userId) =>
+			await Get<EducationRetryCountDto>(KeyEducationRetryCount, userId) ?? new EducationRetryCountDto();
+
+		private async ValueTask<EducationRetryLastDateDto> GetEducationRetryLastDate(Guid? userId) =>
+			await Get<EducationRetryLastDateDto>(KeyEducationRetryLastDate, userId) ?? new EducationRetryLastDateDto();
 
 		private async ValueTask<T> Get<T>(Func<string> keyFunc, Guid? userId) where T : class
 		{
@@ -113,48 +191,6 @@ namespace Service.EducationRetry.Services
 			}
 		});
 
-		public async ValueTask<RetryCountGrpcResponse> GetRetryCountAsync(GetRetryCountGrpcRequest request)
-		{
-			EducationRetryCountDto countDto = await GetEducationRetryCount(request.UserId);
-
-			return new RetryCountGrpcResponse
-			{
-				Count = countDto.Count
-			};
-		}
-
-		public async ValueTask<TaskRetryStateGrpcResponse> GetTaskRetryStateAsync(GetTaskRetryStateGrpcRequest request)
-		{
-			EducationRetryTaskDto[] taskDto = await GetEducationRetryTasks(request.UserId);
-
-			return new TaskRetryStateGrpcResponse
-			{
-				InRetry = TaskInRetry(request.Tutorial, request.Unit, request.Task, taskDto)
-			};
-		}
-
-		private static bool TaskInRetry(EducationTutorial tutorial, int unit, int task, IEnumerable<EducationRetryTaskDto> taskDto) => taskDto
-			.Where(dto => dto.Tutorial == tutorial)
-			.Where(dto => dto.Unit == unit)
-			.Any(dto => dto.Task == task);
-
-		public async ValueTask<CommonGrpcResponse> ClearTaskRetryStateAsync(ClearTaskRetryStateGrpcRequest request)
-		{
-			Guid? userId = request.UserId;
-
-			List<EducationRetryTaskDto> taskDto = (await GetEducationRetryTasks(userId)).ToList();
-
-			EducationRetryTaskDto item = taskDto
-				.Where(dto => dto.Tutorial == request.Tutorial)
-				.Where(dto => dto.Unit == request.Unit)
-				.FirstOrDefault(dto => dto.Task == request.Task);
-
-			if (item == null)
-				return CommonGrpcResponse.Success;
-
-			taskDto.Remove(item);
-
-			return await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
-		}
+		private bool OneDayGone(DateTime date) => _systemClock.Now.Subtract(date).TotalDays >= 1;
 	}
 }

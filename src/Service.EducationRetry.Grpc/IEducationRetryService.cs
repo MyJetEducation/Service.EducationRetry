@@ -15,6 +15,9 @@ namespace Service.EducationRetry.Grpc
 		ValueTask<CommonGrpcResponse> DecreaseRetryCountAsync(DecreaseRetryCountGrpcRequest request);
 
 		[OperationContract]
+		ValueTask<CommonGrpcResponse> DecreaseRetryDateAsync(DecreaseRetryDateGrpcRequest request);
+
+		[OperationContract]
 		ValueTask<RetryCountGrpcResponse> GetRetryCountAsync(GetRetryCountGrpcRequest request);
 
 		[OperationContract]
@@ -22,5 +25,8 @@ namespace Service.EducationRetry.Grpc
 
 		[OperationContract]
 		ValueTask<CommonGrpcResponse> ClearTaskRetryStateAsync(ClearTaskRetryStateGrpcRequest request);
+
+		[OperationContract]
+		ValueTask<RetryLastDateGrpcResponse> GetRetryLastDateAsync(GetRetryLastDateGrpcRequest request);
 	}
 }

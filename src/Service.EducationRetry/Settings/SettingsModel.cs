@@ -20,6 +20,9 @@ namespace Service.EducationRetry.Settings
 		[YamlProperty("EducationRetry.KeyEducationRetryCount")]
 		public string KeyEducationRetryCount { get; set; }
 
+		[YamlProperty("EducationRetry.KeyEducationRetryLastDate")]
+		public string KeyEducationRetryLastDate { get; set; }
+
 		[YamlProperty("EducationRetry.KeyEducationRetryTask")]
 		public string KeyEducationRetryTask { get; set; }
 	}

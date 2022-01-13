@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Microsoft.AspNetCore.Authentication;
 
 namespace Service.EducationRetry.Modules
 {
@@ -7,6 +8,7 @@ namespace Service.EducationRetry.Modules
         protected override void Load(ContainerBuilder builder)
         {
             builder.RegisterInstance(Program.Settings).AsSelf().SingleInstance();
+            builder.RegisterType<SystemClock>().AsImplementedInterfaces().SingleInstance();
         }
     }
 }
