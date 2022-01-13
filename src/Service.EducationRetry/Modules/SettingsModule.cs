@@ -1,5 +1,5 @@
 ﻿using Autofac;
-using Microsoft.AspNetCore.Authentication;
+using Service.Core.Domain;
 
 namespace Service.EducationRetry.Modules
 {
