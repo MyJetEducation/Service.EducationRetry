@@ -25,5 +25,11 @@ namespace Service.EducationRetry.Settings
 
 		[YamlProperty("EducationRetry.KeyEducationRetryTask")]
 		public string KeyEducationRetryTask { get; set; }
+
+		[YamlProperty("EducationRetry.KeyEducationRetryUsedCount")]
+		public string KeyEducationRetryUsedCount { get; set; }
+
+		[YamlProperty("EducationRetry.ServiceBusWriter")]
+		public string ServiceBusWriter { get; set; }
 	}
 }

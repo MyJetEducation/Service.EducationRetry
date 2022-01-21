@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
+using DotNetCoreDecorators;
 using Microsoft.Extensions.Logging;
 using Service.Core.Domain.Models;
 using Service.Core.Domain.Models.Education;
@@ -20,16 +21,22 @@ namespace Service.EducationRetry.Services
 		private static Func<string> KeyEducationRetryCount => Program.ReloadedSettings(model => model.KeyEducationRetryCount);
 		private static Func<string> KeyEducationRetryLastDate => Program.ReloadedSettings(model => model.KeyEducationRetryLastDate);
 		private static Func<string> KeyEducationRetryTask => Program.ReloadedSettings(model => model.KeyEducationRetryTask);
+		private static Func<string> KeyEducationRetryUsedCount => Program.ReloadedSettings(model => model.KeyEducationRetryUsedCount);
 
 		private readonly IServerKeyValueService _serverKeyValueService;
 		private readonly ILogger<EducationRetryService> _logger;
 		private readonly ISystemClock _systemClock;
+		private readonly IPublisher<UpdateRetryUsedCountInfoServiceBusModel> _publisher;
 
-		public EducationRetryService(ILogger<EducationRetryService> logger, IServerKeyValueService serverKeyValueService, ISystemClock systemClock)
+		public EducationRetryService(ILogger<EducationRetryService> logger, 
+			IServerKeyValueService serverKeyValueService, 
+			ISystemClock systemClock, 
+			IPublisher<UpdateRetryUsedCountInfoServiceBusModel> publisher)
 		{
 			_logger = logger;
 			_serverKeyValueService = serverKeyValueService;
 			_systemClock = systemClock;
+			_publisher = publisher;
 		}
 
 		public async ValueTask<CommonGrpcResponse> DecreaseRetryCountAsync(DecreaseRetryCountGrpcRequest request) => await DecreaseRetryAsync(request, async userId =>
@@ -90,7 +97,32 @@ namespace Service.EducationRetry.Services
 			});
 
 			//Set task to retry state
-			return await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
+			CommonGrpcResponse response = await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
+			if (response.IsSuccess)
+				await UpdateRetryUsedCount(request.UserId);
+
+			return response;
+		}
+
+		private async Task UpdateRetryUsedCount(Guid? userId)
+		{
+			EducationRetryUsedCountDto usedCountDto = await Get<EducationRetryUsedCountDto>(KeyEducationRetryUsedCount, userId)
+				?? new EducationRetryUsedCountDto();
+
+			usedCountDto.Count++;
+
+			CommonGrpcResponse response = await Set(KeyEducationRetryUsedCount, userId, usedCountDto);
+			if (!response.IsSuccess)
+			{
+				_logger.LogError("Error while update used retry count for user: {user}.", userId);
+				return;
+			}
+
+			await _publisher.PublishAsync(new UpdateRetryUsedCountInfoServiceBusModel
+			{
+				UserId = userId,
+				Count = usedCountDto.Count
+			});
 		}
 
 		public async ValueTask<CommonGrpcResponse> ClearTaskRetryStateAsync(ClearTaskRetryStateGrpcRequest request)
