@@ -2,25 +2,25 @@
 using DotNetCoreDecorators;
 using MyJetWallet.Sdk.ServiceBus;
 using MyServiceBus.TcpClient;
-using Service.EducationRetry.Domain.Models;
+using Service.EducationRetry.Grpc.ServiceBusModel;
 
 namespace Service.EducationRetry.Services
 {
-	public class MyServiceBusPublisher : IPublisher<UpdateRetryUsedCountInfoServiceBusModel>
+	public class MyServiceBusPublisher : IPublisher<RetryUsedServiceBusModel>
 	{
 		private readonly MyServiceBusTcpClient _client;
 
 		public MyServiceBusPublisher(MyServiceBusTcpClient client)
 		{
 			_client = client;
-			_client.CreateTopicIfNotExists(UpdateRetryUsedCountInfoServiceBusModel.TopicName);
+			_client.CreateTopicIfNotExists(RetryUsedServiceBusModel.TopicName);
 		}
 
-		public ValueTask PublishAsync(UpdateRetryUsedCountInfoServiceBusModel valueToPublish)
+		public ValueTask PublishAsync(RetryUsedServiceBusModel valueToPublish)
 		{
 			byte[] bytesToSend = valueToPublish.ServiceBusContractToByteArray();
 
-			Task task = _client.PublishAsync(UpdateRetryUsedCountInfoServiceBusModel.TopicName, bytesToSend, false);
+			Task task = _client.PublishAsync(RetryUsedServiceBusModel.TopicName, bytesToSend, false);
 
 			return new ValueTask(task);
 		}

@@ -11,6 +11,7 @@ using Service.Core.Grpc.Models;
 using Service.EducationRetry.Domain.Models;
 using Service.EducationRetry.Grpc;
 using Service.EducationRetry.Grpc.Models;
+using Service.EducationRetry.Grpc.ServiceBusModel;
 using Service.ServerKeyValue.Grpc;
 using Service.ServerKeyValue.Grpc.Models;
 
@@ -26,12 +27,12 @@ namespace Service.EducationRetry.Services
 		private readonly IServerKeyValueService _serverKeyValueService;
 		private readonly ILogger<EducationRetryService> _logger;
 		private readonly ISystemClock _systemClock;
-		private readonly IPublisher<UpdateRetryUsedCountInfoServiceBusModel> _publisher;
+		private readonly IPublisher<RetryUsedServiceBusModel> _publisher;
 
 		public EducationRetryService(ILogger<EducationRetryService> logger, 
 			IServerKeyValueService serverKeyValueService, 
 			ISystemClock systemClock, 
-			IPublisher<UpdateRetryUsedCountInfoServiceBusModel> publisher)
+			IPublisher<RetryUsedServiceBusModel> publisher)
 		{
 			_logger = logger;
 			_serverKeyValueService = serverKeyValueService;
@@ -118,7 +119,7 @@ namespace Service.EducationRetry.Services
 				return;
 			}
 
-			await _publisher.PublishAsync(new UpdateRetryUsedCountInfoServiceBusModel
+			await _publisher.PublishAsync(new RetryUsedServiceBusModel
 			{
 				UserId = userId,
 				Count = usedCountDto.Count
