@@ -1,7 +1,7 @@
 ﻿using Autofac;
 using DotNetCoreDecorators;
 using MyServiceBus.TcpClient;
-using Service.Core.Domain;
+using Service.Core.Client.Services;
 using Service.EducationRetry.Grpc.ServiceBusModel;
 using Service.EducationRetry.Services;
 using Service.ServerKeyValue.Client;

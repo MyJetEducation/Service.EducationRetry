@@ -1,4 +1,4 @@
-﻿namespace Service.EducationRetry.Domain.Models
+﻿namespace Service.EducationRetry.Models
 {
 	public class EducationRetryCountDto
 	{

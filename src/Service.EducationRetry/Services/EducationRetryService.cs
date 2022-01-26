@@ -5,13 +5,13 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using DotNetCoreDecorators;
 using Microsoft.Extensions.Logging;
-using Service.Core.Domain.Models;
-using Service.Core.Domain.Models.Education;
-using Service.Core.Grpc.Models;
-using Service.EducationRetry.Domain.Models;
+using Service.Core.Client.Education;
+using Service.Core.Client.Models;
+using Service.Core.Client.Services;
 using Service.EducationRetry.Grpc;
 using Service.EducationRetry.Grpc.Models;
 using Service.EducationRetry.Grpc.ServiceBusModel;
+using Service.EducationRetry.Models;
 using Service.ServerKeyValue.Grpc;
 using Service.ServerKeyValue.Grpc.Models;
 

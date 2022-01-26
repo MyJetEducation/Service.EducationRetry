@@ -1,6 +1,6 @@
-﻿using Service.Core.Domain.Models.Education;
+﻿using Service.Core.Client.Education;
 
-namespace Service.EducationRetry.Domain.Models
+namespace Service.EducationRetry.Models
 {
 	public class EducationRetryTaskDto
 	{
