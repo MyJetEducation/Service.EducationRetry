@@ -8,6 +8,8 @@ using Microsoft.Extensions.Logging;
 using Service.Core.Client.Education;
 using Service.Core.Client.Models;
 using Service.Core.Client.Services;
+using Service.EducationProgress.Grpc;
+using Service.EducationProgress.Grpc.Models;
 using Service.EducationRetry.Grpc;
 using Service.EducationRetry.Grpc.Models;
 using Service.EducationRetry.Grpc.ServiceBusModel;
@@ -28,16 +30,19 @@ namespace Service.EducationRetry.Services
 		private readonly ILogger<EducationRetryService> _logger;
 		private readonly ISystemClock _systemClock;
 		private readonly IPublisher<RetryUsedServiceBusModel> _publisher;
+		private readonly IEducationProgressService _educationProgressService;
 
 		public EducationRetryService(ILogger<EducationRetryService> logger, 
 			IServerKeyValueService serverKeyValueService, 
 			ISystemClock systemClock, 
-			IPublisher<RetryUsedServiceBusModel> publisher)
+			IPublisher<RetryUsedServiceBusModel> publisher, 
+			IEducationProgressService educationProgressService)
 		{
 			_logger = logger;
 			_serverKeyValueService = serverKeyValueService;
 			_systemClock = systemClock;
 			_publisher = publisher;
+			_educationProgressService = educationProgressService;
 		}
 
 		public async ValueTask<CommonGrpcResponse> DecreaseRetryCountAsync(DecreaseRetryCountGrpcRequest request) => await DecreaseRetryAsync(request, async userId =>
@@ -81,6 +86,10 @@ namespace Service.EducationRetry.Services
 		{
 			Guid? userId = request.UserId;
 			List<EducationRetryTaskDto> taskDto = (await GetEducationRetryTasks(userId)).ToList();
+
+			//Task not has progress
+			if (await TaskHasNoProgress(request))
+				return CommonGrpcResponse.Fail;
 
 			//Already in retry state
 			if (TaskInRetry(request.Tutorial, request.Unit, request.Task, taskDto))
@@ -182,6 +191,19 @@ namespace Service.EducationRetry.Services
 			{
 				Date = lastDateDto.Date
 			};
+		}
+
+		private async ValueTask<bool> TaskHasNoProgress(IDecreaseRetryRequest request)
+		{
+			TaskEducationProgressGrpcResponse progressResponse = await _educationProgressService.GetTaskProgressAsync(new GetTaskEducationProgressGrpcRequest
+			{
+				UserId = request.UserId,
+				Tutorial = request.Tutorial,
+				Unit = request.Unit,
+				Task = request.Task
+			});
+
+			return progressResponse?.Progress?.HasProgress != true;
 		}
 
 		private static bool TaskInRetry(EducationTutorial tutorial, int unit, int task, IEnumerable<EducationRetryTaskDto> taskDto) => taskDto

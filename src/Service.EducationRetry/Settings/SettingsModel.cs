@@ -31,5 +31,8 @@ namespace Service.EducationRetry.Settings
 
 		[YamlProperty("EducationRetry.ServiceBusWriter")]
 		public string ServiceBusWriter { get; set; }
+
+		[YamlProperty("EducationRetry.EducationProgressServiceUrl")]
+		public string EducationProgressServiceUrl { get; set; }
 	}
 }
