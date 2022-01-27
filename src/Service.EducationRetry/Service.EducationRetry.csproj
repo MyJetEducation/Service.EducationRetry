@@ -13,7 +13,7 @@
     <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="1.0.152" />
     <PackageReference Include="SimpleTrading.ServiceStatusReporterConnector" Version="1.0.9" />
     <PackageReference Include="MyJetWallet.Sdk.ServiceBus" Version="2.1.0" />
-    <PackageReference Include="MyJetEducation.Service.EducationProgress.Client" Version="1.0.10" />
+    <PackageReference Include="MyJetEducation.Service.EducationProgress.Client" Version="1.0.11" />
   </ItemGroup>
 
   <ItemGroup>
