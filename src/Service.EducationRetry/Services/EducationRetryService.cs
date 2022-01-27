@@ -151,7 +151,9 @@ namespace Service.EducationRetry.Services
 
 			taskDto.Remove(item);
 
-			return await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
+			return taskDto.Count == 0
+				? await Delete(KeyEducationRetryTask, userId)
+				: await Set(KeyEducationRetryTask, userId, taskDto.ToArray());
 		}
 
 		public async ValueTask<CommonGrpcResponse> IncreaseRetryCountAsync(IncreaseRetryCountGrpcRequest request)
@@ -243,6 +245,15 @@ namespace Service.EducationRetry.Services
 					Key = keyFunc.Invoke(),
 					Value = JsonSerializer.Serialize(dto)
 				}
+			}
+		});
+
+		private async ValueTask<CommonGrpcResponse> Delete(Func<string> keyFunc, Guid? userId) => await _serverKeyValueService.Delete(new ItemsDeleteGrpcRequest
+		{
+			UserId = userId,
+			Keys = new[]
+			{
+				keyFunc.Invoke()
 			}
 		});
 
