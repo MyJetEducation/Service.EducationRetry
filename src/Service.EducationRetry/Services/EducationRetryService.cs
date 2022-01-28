@@ -12,10 +12,10 @@ using Service.EducationProgress.Grpc;
 using Service.EducationProgress.Grpc.Models;
 using Service.EducationRetry.Grpc;
 using Service.EducationRetry.Grpc.Models;
-using Service.EducationRetry.Grpc.ServiceBusModel;
 using Service.EducationRetry.Models;
 using Service.ServerKeyValue.Grpc;
 using Service.ServerKeyValue.Grpc.Models;
+using Service.ServiceBus.Models;
 
 namespace Service.EducationRetry.Services
 {

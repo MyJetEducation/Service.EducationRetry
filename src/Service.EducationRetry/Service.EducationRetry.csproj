@@ -7,13 +7,18 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.2.0" />
+    <PackageReference Include="Autofac.Extensions.DependencyInjection" Version="7.2.0">
+      <TreatAsUsed>true</TreatAsUsed>
+    </PackageReference>
     <PackageReference Include="MyJetEducation.Service.ServerKeyValue.Client" Version="1.0.2" />
-    <PackageReference Include="MyJetWallet.Sdk.Service" Version="2.1.6" />
-    <PackageReference Include="protobuf-net.Grpc.AspNetCore" Version="1.0.152" />
-    <PackageReference Include="SimpleTrading.ServiceStatusReporterConnector" Version="1.0.9" />
-    <PackageReference Include="MyJetWallet.Sdk.ServiceBus" Version="2.1.0" />
+    <PackageReference Include="MyJetWallet.Sdk.Service" Version="2.1.6">
+      <TreatAsUsed>true</TreatAsUsed>
+    </PackageReference>
+    <PackageReference Include="MyJetWallet.Sdk.ServiceBus" Version="2.1.0">
+      <TreatAsUsed>true</TreatAsUsed>
+    </PackageReference>
     <PackageReference Include="MyJetEducation.Service.EducationProgress.Client" Version="1.0.11" />
+    <PackageReference Include="MyJetEducation.Service.ServiceBus" Version="1.0.8" />
   </ItemGroup>
 
   <ItemGroup>

@@ -1,11 +1,10 @@
 ﻿using Autofac;
-using DotNetCoreDecorators;
+using MyJetWallet.Sdk.ServiceBus;
 using MyServiceBus.TcpClient;
 using Service.Core.Client.Services;
 using Service.EducationProgress.Client;
-using Service.EducationRetry.Grpc.ServiceBusModel;
-using Service.EducationRetry.Services;
 using Service.ServerKeyValue.Client;
+using Service.ServiceBus.Models;
 
 namespace Service.EducationRetry.Modules
 {
@@ -18,8 +17,12 @@ namespace Service.EducationRetry.Modules
 			builder.RegisterEducationProgressClient(Program.Settings.EducationProgressServiceUrl);
 
 			var tcpServiceBus = new MyServiceBusTcpClient(() => Program.Settings.ServiceBusWriter, "MyJetEducation Service.EducationRetry");
-			IPublisher<RetryUsedServiceBusModel> clientRegisterPublisher = new MyServiceBusPublisher(tcpServiceBus);
-			builder.Register(context => clientRegisterPublisher);
+
+			builder
+				.Register(context => new MyServiceBusPublisher<RetryUsedServiceBusModel>(tcpServiceBus, RetryUsedServiceBusModel.TopicName, false))
+				.As<IServiceBusPublisher<RetryUsedServiceBusModel>>()
+				.SingleInstance();
+
 			tcpServiceBus.Start();
 		}
 	}
