@@ -3,8 +3,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
-using DotNetCoreDecorators;
 using Microsoft.Extensions.Logging;
+using MyJetWallet.Sdk.ServiceBus;
 using Service.Core.Client.Education;
 using Service.Core.Client.Models;
 using Service.Core.Client.Services;
@@ -29,13 +29,13 @@ namespace Service.EducationRetry.Services
 		private readonly IServerKeyValueService _serverKeyValueService;
 		private readonly ILogger<EducationRetryService> _logger;
 		private readonly ISystemClock _systemClock;
-		private readonly IPublisher<RetryUsedServiceBusModel> _publisher;
+		private readonly IServiceBusPublisher<RetryUsedServiceBusModel> _publisher;
 		private readonly IEducationProgressService _educationProgressService;
 
 		public EducationRetryService(ILogger<EducationRetryService> logger, 
 			IServerKeyValueService serverKeyValueService, 
-			ISystemClock systemClock, 
-			IPublisher<RetryUsedServiceBusModel> publisher, 
+			ISystemClock systemClock,
+			IServiceBusPublisher<RetryUsedServiceBusModel> publisher, 
 			IEducationProgressService educationProgressService)
 		{
 			_logger = logger;
