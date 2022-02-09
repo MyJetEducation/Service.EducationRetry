@@ -1,5 +1,5 @@
 ﻿using System;
-using Service.Core.Client.Education;
+using Service.Education.Structure;
 
 namespace Service.EducationRetry.Grpc.Models
 {
