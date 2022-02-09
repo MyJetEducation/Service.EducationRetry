@@ -6,6 +6,8 @@ using Microsoft.Extensions.Logging;
 using MyJetWallet.Sdk.ServiceBus;
 using Service.Core.Client.Models;
 using Service.Core.Client.Services;
+using Service.Education.Constants;
+using Service.Education.Helpers;
 using Service.Education.Structure;
 using Service.EducationProgress.Grpc;
 using Service.EducationProgress.Grpc.Models;
@@ -81,11 +83,12 @@ namespace Service.EducationRetry.Services
 		private async ValueTask<CommonGrpcResponse> DecreaseRetryAsync(IDecreaseRetryRequest request, Func<Guid?, ValueTask<bool>> reserveFunc)
 		{
 			Guid? userId = request.UserId;
-			List<EducationRetryTaskDto> taskDto = (await _retryRepository.GetEducationRetryTasks(userId)).ToList();
 
-			//Task not has progress
-			if (await TaskHasNoProgress(request))
+			//Task has invalid progress value
+			if (await InvalidProgress(request))
 				return CommonGrpcResponse.Fail;
+
+			List<EducationRetryTaskDto> taskDto = (await _retryRepository.GetEducationRetryTasks(userId)).ToList();
 
 			//Already in retry state
 			if (TaskInRetry(request.Tutorial, request.Unit, request.Task, taskDto))
@@ -191,7 +194,7 @@ namespace Service.EducationRetry.Services
 			};
 		}
 
-		private async ValueTask<bool> TaskHasNoProgress(IDecreaseRetryRequest request)
+		private async ValueTask<bool> InvalidProgress(IDecreaseRetryRequest request)
 		{
 			TaskEducationProgressGrpcResponse progressResponse = await _educationProgressService.GetTaskProgressAsync(new GetTaskEducationProgressGrpcRequest
 			{
@@ -201,7 +204,11 @@ namespace Service.EducationRetry.Services
 				Task = request.Task
 			});
 
-			return progressResponse?.Progress?.HasProgress != true;
+			EducationStructureTask task = EducationHelper.GetTask(request.Tutorial, request.Unit, request.Task);
+
+			int? progressValue = progressResponse?.Progress?.Value;
+
+			return progressValue == null || progressValue == Progress.MaxProgress && task.TaskType != EducationTaskType.Game;
 		}
 
 		private static bool TaskInRetry(EducationTutorial tutorial, int unit, int task, IEnumerable<EducationRetryTaskDto> taskDto) => taskDto
