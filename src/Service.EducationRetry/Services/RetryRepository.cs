@@ -3,6 +3,7 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using Service.Core.Client.Models;
 using Service.EducationRetry.Models;
+using Service.Grpc;
 using Service.ServerKeyValue.Grpc;
 using Service.ServerKeyValue.Grpc.Models;
 
@@ -14,9 +15,9 @@ namespace Service.EducationRetry.Services
 		private static Func<string> KeyEducationRetryLastDate => Program.ReloadedSettings(model => model.KeyEducationRetryLastDate);
 		private static Func<string> KeyEducationRetryTask => Program.ReloadedSettings(model => model.KeyEducationRetryTask);
 
-		private readonly IServerKeyValueService _serverKeyValueService;
+		private readonly IGrpcServiceProxy<IServerKeyValueService> _serverKeyValueService;
 
-		public RetryRepository(IServerKeyValueService serverKeyValueService) => _serverKeyValueService = serverKeyValueService;
+		public RetryRepository(IGrpcServiceProxy<IServerKeyValueService> serverKeyValueService) => _serverKeyValueService = serverKeyValueService;
 
 		public async ValueTask<EducationRetryTaskDto[]> GetEducationRetryTasks(Guid? userId) =>
 			await Get<EducationRetryTaskDto[]>(KeyEducationRetryTask, userId) ?? Array.Empty<EducationRetryTaskDto>();
@@ -29,7 +30,7 @@ namespace Service.EducationRetry.Services
 
 		public async ValueTask<T> Get<T>(Func<string> keyFunc, Guid? userId) where T : class
 		{
-			string value = (await _serverKeyValueService.GetSingle(new ItemsGetSingleGrpcRequest
+			string value = (await _serverKeyValueService.Service.GetSingle(new ItemsGetSingleGrpcRequest
 			{
 				UserId = userId,
 				Key = keyFunc.Invoke()
@@ -40,7 +41,7 @@ namespace Service.EducationRetry.Services
 				: JsonSerializer.Deserialize<T>(value);
 		}
 
-		public async ValueTask<CommonGrpcResponse> Set<T>(Func<string> keyFunc, Guid? userId, T dto) => await _serverKeyValueService.Put(new ItemsPutGrpcRequest
+		public async ValueTask<CommonGrpcResponse> Set<T>(Func<string> keyFunc, Guid? userId, T dto) => await _serverKeyValueService.TryCall(service => service.Put(new ItemsPutGrpcRequest
 		{
 			UserId = userId,
 			Items = new[]
@@ -51,15 +52,15 @@ namespace Service.EducationRetry.Services
 					Value = JsonSerializer.Serialize(dto)
 				}
 			}
-		});
+		}));
 
-		public async ValueTask<CommonGrpcResponse> Delete(Func<string> keyFunc, Guid? userId) => await _serverKeyValueService.Delete(new ItemsDeleteGrpcRequest
+		public async ValueTask<CommonGrpcResponse> Delete(Func<string> keyFunc, Guid? userId) => await _serverKeyValueService.TryCall(service => service.Delete(new ItemsDeleteGrpcRequest
 		{
 			UserId = userId,
 			Keys = new[]
 			{
 				keyFunc.Invoke()
 			}
-		});
+		}));
 	}
 }

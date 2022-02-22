@@ -1,4 +1,5 @@
 ﻿using Autofac;
+using Microsoft.Extensions.Logging;
 using MyJetWallet.Sdk.ServiceBus;
 using MyServiceBus.TcpClient;
 using Service.Core.Client.Services;
@@ -13,10 +14,11 @@ namespace Service.EducationRetry.Modules
 	{
 		protected override void Load(ContainerBuilder builder)
 		{
-			builder.RegisterServerKeyValueClient(Program.Settings.ServerKeyValueServiceUrl);
+			builder.RegisterServerKeyValueClient(Program.Settings.ServerKeyValueServiceUrl, Program.LogFactory.CreateLogger(typeof(ServerKeyValueClientFactory)));
+			builder.RegisterEducationProgressClient(Program.Settings.EducationProgressServiceUrl);
+
 			builder.RegisterType<SystemClock>().AsImplementedInterfaces().SingleInstance();
 			builder.RegisterType<RetryRepository>().AsImplementedInterfaces().SingleInstance();
-			builder.RegisterEducationProgressClient(Program.Settings.EducationProgressServiceUrl);
 
 			var tcpServiceBus = new MyServiceBusTcpClient(() => Program.Settings.ServiceBusWriter, "MyJetEducation Service.EducationRetry");
 

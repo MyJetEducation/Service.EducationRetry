@@ -15,8 +15,8 @@ namespace TestApp
             Console.Write("Press enter to start");
             Console.ReadLine();
 
-            var factory = new EducationRetryClientFactory("http://localhost:5001");
-            var client = factory.GetEducationRetryService();
+            //var factory = new EducationRetryClientFactory("http://localhost:5001");
+            //var client = factory.GetEducationRetryService();
 
             //var resp = await  client.SayHelloAsync(new IncreaseRetryCountGrpcRequest(){Name = "Alex"});
             //Console.WriteLine(resp?.Message);

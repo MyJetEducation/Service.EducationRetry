@@ -1,16 +1,17 @@
 ﻿using JetBrains.Annotations;
-using MyJetWallet.Sdk.Grpc;
+using Microsoft.Extensions.Logging;
 using Service.EducationRetry.Grpc;
+using Service.Grpc;
 
 namespace Service.EducationRetry.Client
 {
-    [UsedImplicitly]
-    public class EducationRetryClientFactory : MyGrpcClientFactory
-    {
-        public EducationRetryClientFactory(string grpcServiceUrl) : base(grpcServiceUrl)
-        {
-        }
+	[UsedImplicitly]
+	public class EducationRetryClientFactory : GrpcClientFactory
+	{
+		public EducationRetryClientFactory(string grpcServiceUrl, ILogger logger) : base(grpcServiceUrl, logger)
+		{
+		}
 
-        public IEducationRetryService GetEducationRetryService() => CreateGrpcService<IEducationRetryService>();
-    }
+		public IGrpcServiceProxy<IEducationRetryService> GetEducationRetryService() => CreateGrpcService<IEducationRetryService>();
+	}
 }

@@ -11,6 +11,7 @@ using Prometheus;
 using Service.EducationRetry.Grpc;
 using Service.EducationRetry.Modules;
 using Service.EducationRetry.Services;
+using Service.Grpc;
 using SimpleTrading.ServiceStatusReporterConnector;
 
 namespace Service.EducationRetry
@@ -19,7 +20,7 @@ namespace Service.EducationRetry
     {
         public void ConfigureServices(IServiceCollection services)
         {
-            services.BindCodeFirstGrpc();
+            services.BindGrpc();
             services.AddHostedService<ApplicationLifetimeManager>();
             services.AddMyTelemetry("ED-", Program.Settings.ZipkinUrl);
         }
