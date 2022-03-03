@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Service.EducationRetry.Models
+namespace Service.EducationRetry.Domain.Models
 {
 	public class EducationRetryLastDateDto
 	{

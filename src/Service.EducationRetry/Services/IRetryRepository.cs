@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using Service.Core.Client.Models;
+using Service.EducationRetry.Domain.Models;
 using Service.EducationRetry.Models;
 
 namespace Service.EducationRetry.Services

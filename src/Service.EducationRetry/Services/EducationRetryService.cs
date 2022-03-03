@@ -11,6 +11,7 @@ using Service.Education.Helpers;
 using Service.Education.Structure;
 using Service.EducationProgress.Grpc;
 using Service.EducationProgress.Grpc.Models;
+using Service.EducationRetry.Domain.Models;
 using Service.EducationRetry.Grpc;
 using Service.EducationRetry.Grpc.Models;
 using Service.EducationRetry.Models;

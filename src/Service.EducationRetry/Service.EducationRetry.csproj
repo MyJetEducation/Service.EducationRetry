@@ -19,6 +19,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Service.EducationRetry.Domain.Models\Service.EducationRetry.Domain.Models.csproj" />
     <ProjectReference Include="..\Service.EducationRetry.Grpc\Service.EducationRetry.Grpc.csproj" />
   </ItemGroup>
 

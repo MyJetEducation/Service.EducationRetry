@@ -2,6 +2,7 @@
 using System.Text.Json;
 using System.Threading.Tasks;
 using Service.Core.Client.Models;
+using Service.EducationRetry.Domain.Models;
 using Service.EducationRetry.Models;
 using Service.Grpc;
 using Service.ServerKeyValue.Grpc;
