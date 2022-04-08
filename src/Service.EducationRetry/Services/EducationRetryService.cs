@@ -81,9 +81,9 @@ namespace Service.EducationRetry.Services
 			return false;
 		});
 
-		private async ValueTask<CommonGrpcResponse> DecreaseRetryAsync(IDecreaseRetryRequest request, Func<Guid?, ValueTask<bool>> reserveFunc)
+		private async ValueTask<CommonGrpcResponse> DecreaseRetryAsync(IDecreaseRetryRequest request, Func<string, ValueTask<bool>> reserveFunc)
 		{
-			Guid? userId = request.UserId;
+			string userId = request.UserId;
 
 			//Task has invalid progress value
 			if (await InvalidProgress(request))
@@ -114,7 +114,7 @@ namespace Service.EducationRetry.Services
 			return response;
 		}
 
-		private async Task UpdateRetryUsedCount(Guid? userId)
+		private async Task UpdateRetryUsedCount(string userId)
 		{
 			EducationRetryUsedCountDto usedCountDto = await _retryRepository.Get<EducationRetryUsedCountDto>(KeyEducationRetryUsedCount, userId)
 				?? new EducationRetryUsedCountDto();
@@ -137,7 +137,7 @@ namespace Service.EducationRetry.Services
 
 		public async ValueTask<CommonGrpcResponse> ClearTaskRetryStateAsync(ClearTaskRetryStateGrpcRequest request)
 		{
-			Guid? userId = request.UserId;
+			string userId = request.UserId;
 
 			List<EducationRetryTaskDto> taskDto = (await _retryRepository.GetEducationRetryTasks(userId)).ToList();
 
